@@ -45,7 +45,7 @@ on a periodic domain $x \in [-L, L)$ with $N$ grid points. $\psi(x,t)$ is the co
 
 ## Features
 
-- **Spectral discretization**: FFT-based Laplacian; configurable $L$ and $N$.
+- **Spectral discretization**: Fast Fourier Transform-based Laplacian; configurable $L$ and $N$.
 - **Initial conditions**: Gaussian, single soliton, multi-soliton, random spectral, custom formula.
 - **Time-stepping**: **Full** (one integrator), **Lie** or **Strang** splitting with **exact** or **numeric** sub-flows; Strang with Yoshida orders 2, 4, 6.
 - **Integrators**: Explicit RK (1–7), SDIRK (2–4), Gauss–Legendre, Radau IIA, Lobatto IIIC, Rosenbrock (2), Adams–Bashforth, Adams–Moulton, ABM, BDF.
