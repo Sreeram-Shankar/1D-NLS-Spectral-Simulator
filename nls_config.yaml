@@ -1,0 +1,26 @@
+domain:
+  L: 10.0
+  N: 256
+pde:
+  kappa: 0.2
+initial_condition:
+  type: random_spectral
+  params:
+    seed: 67
+    spectral_cutoff: 32
+    spectral_slope: 0.0
+    amplitude_scaling: 0.3
+    mode: normal
+    enforce_real: false
+time:
+  dt: 0.0001
+  n_steps: 200
+strategy:
+  name: full
+integrator:
+  family: bdf
+  order: 3
+reference:
+  mode: on
+compute:
+  use_gpu: false

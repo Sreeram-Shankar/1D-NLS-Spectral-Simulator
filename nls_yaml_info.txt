@@ -1,0 +1,314 @@
+================================================================================
+NLS YAML Configuration Specification
+================================================================================
+Single source of truth for YAML inputs to the 1D NLS app. RHS functions
+(full_rhs, linear_rhs, nonlinear_rhs) are derived in code from domain + pde;
+only family/order and exact vs numeric are specified in YAML.
+
+--------------------------------------------------------------------------------
+TOP-LEVEL SECTIONS
+--------------------------------------------------------------------------------
+
+  domain              (required)  Grid and physical domain
+  pde                 (required)  PDE coefficient (kappa)
+  initial_condition   (required)  Type and parameters for psi(0)
+  time                (required)  Time step and number of steps (or t_final)
+  strategy            (required)  "full" | "lie" | "strang"
+  integrator          (conditional) When strategy is "full": family and order
+  linear              (conditional) When strategy is "lie" or "strang"
+  nonlinear           (conditional) When strategy is "lie" or "strang"
+  reference           (optional)  Reference solution: on | off
+  output              (optional)  Save path and overwrite flag
+  compute             (optional)  Compute options (e.g. use_gpu for CuPy)
+
+--------------------------------------------------------------------------------
+SECTION: domain
+--------------------------------------------------------------------------------
+  L   (float, required)  Half-length of periodic domain; x in [-L, L).
+  N   (int, required)    Number of grid points (even recommended for FFT).
+
+  Purpose: Drives grid x, spacing dx, wavenumbers k and k_sq = k^2. k_sq and
+  kappa are used in code to build RHS callables and analytical Jacobians.
+
+  Example:
+    domain:
+      L: 10.0
+      N: 256
+
+--------------------------------------------------------------------------------
+SECTION: pde
+--------------------------------------------------------------------------------
+  kappa  (float, required)  Nonlinearity coefficient in i psi_t = -psi_xx + kappa |psi|^2 psi.
+  Note: positive kappa = focusing; negative kappa = defocusing.
+
+  Example:
+    pde:
+      kappa: 0.8
+
+--------------------------------------------------------------------------------
+SECTION: initial_condition
+--------------------------------------------------------------------------------
+  type    (string, required)   One of: "gaussian", "soliton", "multi_soliton", "random_spectral", "custom".
+  params  (mapping, required)   Parameters for the chosen type. Every IC must be reproducible
+  (seeded if random) and define real and imaginary components (or real-only with imag=0).
+
+  For type "gaussian":
+    params:
+      A          (float)  Amplitude. Default 1.0.
+      sigma      (float)  Width. Default 2.0.
+      x0         (float)  Center. Default 0.0.
+      k_carrier  (float, optional)  Carrier wavenumber for modulation. Default 0.0.
+      phase      (float, optional)  Initial phase (radians). Default 0.0.
+    Formula: psi(0) = A * exp(-(x-x0)^2/(2*sigma^2)) * exp(i*(k_carrier*x + phase)).
+
+  For type "soliton":
+    params:
+      eta    (float)  Amplitude/width parameter (sech scale). Required.
+      x0     (float)  Center. Default 0.0.
+      v      (float)  Velocity. Default 0.0.
+      phase  (float)  Phase (radians). Default 0.0.
+    Formula: psi(0) = eta * sech(eta*(x-x0)) * exp(i*(v/2*(x-x0) + phase)).
+
+  For type "multi_soliton":
+    params:
+      solitons  (list, required)  List of soliton definitions, each with eta, x0, v, phase.
+      relative_phase  (list, optional)  Per-soliton phase offset for interactions.
+    Formula: sum of soliton(eta, x0, v, phase + relative_phase) for each entry.
+
+  For type "random_spectral":
+    params:
+      seed             (int, required)   Random seed for reproducibility.
+      spectral_cutoff   (int, required)   Max Fourier mode index (half-sided).
+      spectral_slope    (float, optional) Power-law slope in spectrum. Default 0.0.
+      amplitude_scaling (float, required) Scale factor for amplitudes.
+      mode              (string)  "uniform" | "normal" for random coefficients.
+      enforce_real      (bool, optional)  If true, force real symmetry (real psi). Default false.
+
+  For type "custom":
+    params:
+      formula_real  (string)  Expression for real part in x and params. Safe eval only (sin, cos, exp, tanh, sech, sqrt, abs, etc.).
+      formula_imag  (string, optional)  Expression for imaginary part. If omitted, imag=0.
+      params        (mapping)  Named constants for use in formulas (e.g. a: 1.0, b: 2.0).
+
+  Example (gaussian):
+    initial_condition:
+      type: gaussian
+      params:
+        A: 1.0
+        sigma: 2.0
+        x0: 0.0
+
+  Example (soliton):
+    initial_condition:
+      type: soliton
+      params:
+        eta: 1.0
+        x0: 0.0
+        v: 0.0
+        phase: 0.0
+
+--------------------------------------------------------------------------------
+SECTION: time
+--------------------------------------------------------------------------------
+  dt       (float, required)   Time step.
+  n_steps  (int, optional)     Number of steps. If omitted, use t_final and dt to compute.
+  t_final  (float, optional)   If given, n_steps = round(t_final / dt). One of n_steps or t_final required.
+
+  Example (explicit n_steps):
+    time:
+      dt: 0.001
+      n_steps: 200
+
+  Example (t_final):
+    time:
+      dt: 0.001
+      t_final: 1.5
+
+--------------------------------------------------------------------------------
+SECTION: strategy
+--------------------------------------------------------------------------------
+  name                 (string, required)  "full" | "lie" | "strang".
+  ordering             (string, optional)  "LN" | "NL". Default: "LN". (For lie/strang: linear then nonlinear or vice versa.)
+  splitting_order      (int, optional)     Yoshida composition order for Strang: 2 | 4 | 6. Default: 2.
+  linear_substeps      (int, optional)     Substeps per macro step for linear part. Default: 1.
+  nonlinear_substeps   (int, optional)     Substeps per macro step for nonlinear part. Default: 1.
+
+  Example (Strang with defaults):
+    strategy:
+      name: strang
+      ordering: LN
+      splitting_order: 2
+      linear_substeps: 1
+      nonlinear_substeps: 1
+
+--------------------------------------------------------------------------------
+SECTION: integrator (only when strategy is "full")
+--------------------------------------------------------------------------------
+  family  (string, required)  Integrator family (see list below).
+  order   (int, required)     Order of the method.
+
+  Supported families (backend): explicit runge-kutta (order 1–7), sdirk (2–4),
+  gauss-legendre, radauiia, lobattoiiic, rosenbrock (order 2), adams-bashforth,
+  adams-moulton, adams-bashforth-moulton / abm, bdf.
+
+  Example:
+    strategy:
+      name: full
+    integrator:
+      family: explicit runge-kutta
+      order: 4
+
+--------------------------------------------------------------------------------
+SECTION: linear (only when strategy is "lie" or "strang")
+--------------------------------------------------------------------------------
+  type    (string, required)  "exact" | "numeric".
+  family  (string, optional)  Required when type is "numeric". Same families as integrator.
+  order   (int, optional)     Required when type is "numeric".
+
+  Example (exact):
+    linear:
+      type: exact
+
+  Example (numeric):
+    linear:
+      type: numeric
+      family: gauss-legendre
+      order: 2
+
+--------------------------------------------------------------------------------
+SECTION: nonlinear (only when strategy is "lie" or "strang")
+--------------------------------------------------------------------------------
+  type    (string, required)  "exact" | "numeric".
+  family  (string, optional)  Required when type is "numeric".
+  order   (int, optional)     Required when type is "numeric".
+
+  Example (exact):
+    nonlinear:
+      type: exact
+
+  Example (numeric):
+    nonlinear:
+      type: numeric
+      family: rosenbrock
+      order: 2
+
+--------------------------------------------------------------------------------
+SECTION: reference (optional)
+--------------------------------------------------------------------------------
+  mode  (string, optional)  "on" | "off". Default: "off".
+
+  When "off": No reference trajectory is computed.
+
+  When "on": A reference trajectory is computed for comparison/error metrics. It uses:
+  - Strang splitting with 6th-order Yoshida composition (splitting_order: 6).
+  - Exact linear and exact nonlinear subflows.
+  - linear_substeps: 2, nonlinear_substeps: 2.
+  - Time step dt_ref = user dt / 100; same t_final (so 100x more steps).
+  The reference run uses the same domain, pde, and initial condition as the main run.
+  In the GUI, this reference run appears as a second progress bar after the main run.
+
+  Example:
+    reference:
+      mode: on
+
+--------------------------------------------------------------------------------
+SECTION: output (optional)
+--------------------------------------------------------------------------------
+  save_path  (string, optional)  Path for trajectory output (e.g. .npz). If absent, no file save.
+  overwrite  (bool, optional)   Whether to overwrite existing file. Default: true.
+
+  GUI-generated visuals and comparison metrics are saved automatically after runs in:
+    nls_outputs/<timestamp>/
+      plots/
+      metrics/
+  This includes core NLS plots and, when reference.mode is "on", main-vs-reference metrics.
+
+  Example:
+    output:
+      save_path: results/nls_trajectory.npz
+      overwrite: true
+
+--------------------------------------------------------------------------------
+SECTION: compute (optional)
+--------------------------------------------------------------------------------
+  use_gpu  (bool, optional)  Default: false.
+
+  When true and CuPy is installed, the time stepping runs on the GPU for runs
+  that use exact linear and exact nonlinear subflows (Lie or Strang with
+  linear.type: exact and nonlinear.type: exact). This includes the reference
+  run when reference.mode is "on". The "full" strategy and numeric subflows
+  remain on CPU. If CuPy is not installed, use_gpu is ignored and the app
+  runs on CPU only. Install with e.g. pip install cupy-cuda12x (see
+  requirements-gpu.txt).
+
+  Example:
+    compute:
+      use_gpu: true
+
+--------------------------------------------------------------------------------
+EXAMPLE SNIPPETS
+--------------------------------------------------------------------------------
+
+1) Exact Strang (LN, order 2):
+   strategy:
+     name: strang
+     ordering: LN
+     splitting_order: 2
+   linear:
+     type: exact
+   nonlinear:
+     type: exact
+
+2) Full RK4:
+   strategy:
+     name: full
+   integrator:
+     family: explicit runge-kutta
+     order: 4
+
+3) Strang with Gauss-Legendre 2 for linear, exact nonlinear:
+   strategy:
+     name: strang
+     splitting_order: 2
+   linear:
+     type: numeric
+     family: gauss-legendre
+     order: 2
+   nonlinear:
+     type: exact
+
+4) Strang Yoshida order 4, exact/exact:
+   strategy:
+     name: strang
+     splitting_order: 4
+   linear:
+     type: exact
+   nonlinear:
+     type: exact
+
+--------------------------------------------------------------------------------
+NOTES
+--------------------------------------------------------------------------------
+- RHS callables are built in code from domain (N, L -> k_sq) and pde (kappa).
+  They are never stored in YAML.
+- State is real embedding Y = [u; v] with psi = u + i*v; Y0 length is 2*N.
+- When linear/nonlinear type is "numeric", the backend uses analytical NLS
+  Jacobians (from k_sq and kappa) for implicit steps when available.
+
+--------------------------------------------------------------------------------
+TESTING
+--------------------------------------------------------------------------------
+- Run the full pipeline with a preset (no save):
+    python nls_main.py presets/exact_strang.yaml
+  Or with the example config:
+    python nls_main.py nls_config_example.yaml
+
+- Run automated tests (unittest) for nls_main, including runs with presets:
+    python test_nls_main.py
+  Or: python -m unittest test_nls_main -v
+  Tests include: parse_nls_config from dict, build_initial_state/build_rhs,
+  run() with presets/exact_strang.yaml (mass conservation check),
+  run() with presets/full_rk4.yaml, and load_yaml/load_nls_config.
+
+- Run a single test (e.g. preset run):
+    python -m unittest test_nls_main.TestNlsMain.test_run_with_exact_strang_preset -v
