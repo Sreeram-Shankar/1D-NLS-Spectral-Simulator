@@ -1,0 +1,36 @@
+#gaussian initial condition with 4th order splitting and abm2 (predictor-corrector adams)
+
+domain:
+  L: 10.0
+  N: 256
+pde:
+  kappa: 0.4
+initial_condition:
+  type: gaussian
+  params:
+    A: 1.0
+    sigma: 2.0
+    x0: 0.0
+    k_carrier: 0.0
+    phase: 0.0
+time:
+  dt: 0.001
+  n_steps: 200
+strategy:
+  name: strang
+  ordering: LN
+  splitting_order: 4
+  linear_substeps: 1
+  nonlinear_substeps: 1
+linear:
+  type: numeric
+  family: adams-moulton
+  order: 2
+nonlinear:
+  type: numeric
+  family: adams-moulton
+  order: 2
+reference:
+  mode: on
+compute:
+  use_gpu: false

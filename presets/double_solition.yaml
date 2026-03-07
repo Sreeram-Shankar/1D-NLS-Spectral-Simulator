@@ -1,0 +1,41 @@
+#double soliton initial condition with 6th order spliting and rk4
+
+domain:
+  L: 10.0
+  N: 256
+pde:
+  kappa: 0.7
+initial_condition:
+  type: multi_soliton
+  params:
+    solitons:
+      - eta: 1.0
+        x0: -3.0
+        v: 0.5
+        phase: 0.0
+      - eta: 1.0
+        x0: 3.0
+        v: -0.5
+        phase: 0.0
+    relative_phase: [0.0, 0.0]
+time:
+  dt: 0.001
+  n_steps: 200
+strategy:
+  name: strang
+  ordering: LN
+  splitting_order: 6
+  linear_substeps: 1
+  nonlinear_substeps: 1
+linear:
+  type: numeric
+  family: explicit runge-kutta
+  order: 4
+nonlinear:
+  type: numeric
+  family: explicit runge-kutta
+  order: 4
+reference:
+  mode: on
+compute:
+  use_gpu: false

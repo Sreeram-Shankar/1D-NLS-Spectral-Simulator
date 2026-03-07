@@ -1,0 +1,35 @@
+#single soliton initial condition with mixed rosenbrock and gauss legendre integrators
+
+domain:
+  L: 10.0
+  N: 256
+pde:
+  kappa: 0.3
+initial_condition:
+  type: soliton
+  params:
+    eta: 1.0
+    x0: 0.0
+    v: 0.0
+    phase: 0.0
+time:
+  dt: 0.001
+  n_steps: 200
+strategy:
+  name: strang
+  ordering: LN
+  splitting_order: 2
+  linear_substeps: 1
+  nonlinear_substeps: 1
+linear:
+  type: numeric
+  family: gauss-legendre
+  order: 2
+nonlinear:
+  type: numeric
+  family: rosenbrock
+  order: 2
+reference:
+  mode: on
+compute:
+  use_gpu: false
