@@ -47,8 +47,8 @@ on a periodic domain $x \in [-L, L)$ with $N$ grid points. $\psi(x,t)$ is the co
 
 - **Spectral discretization**: Fast Fourier Transform-based Laplacian; configurable $L$ and $N$.
 - **Initial conditions**: Gaussian, single soliton, multi-soliton, random spectral, custom formula.
-- **Time-stepping**: **Full** (one integrator), **Lie** or **Strang** splitting with **exact** or **numeric** sub-flows; Strang with Yoshida orders 2, 4, 6.
-- **Integrators**: Explicit RK (1–7), SDIRK (2–4), Gauss–Legendre, Radau IIA, Lobatto IIIC, Rosenbrock (2), Adams–Bashforth, Adams–Moulton, ABM, BDF.
+- **Time-stepping strategy**: **Full** (one integrator), **Lie** or **Strang** splitting with **exact** or **numeric** sub-flows; Strang with Yoshida orders 2, 4, 6.
+- **Integrators (orders: n indicates arbitrary generation)**: Explicit RK (1–7), SDIRK (2–4), Gauss–Legendre (2n), Radau IIA(2n-1), Lobatto IIIC (2n-2), Rosenbrock (2), Adams–Bashforth (n), Adams–Moulton (n), ABM Predictor Corrector (n), BDF (n).
 - **Reference run**: Strang, 6th-order Yoshida, exact linear+nonlinear, $\Delta t/100$, for comparison and metrics.
 - **GUI**: CustomTkinter YAML editor, Run with progress, main and comparison plots, export graphs/data, theme toggle.
 - **Optional GPU**: CuPy for splitting with exact linear and exact nonlinear (YAML: `compute.use_gpu`).
