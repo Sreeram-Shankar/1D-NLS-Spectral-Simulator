@@ -165,8 +165,7 @@ def solve_am(f, t_span, y0, h, order=3, jac=None, tol=1e-10, max_iter=12, fd_eps
 
 #defines the BDF solver
 def solve_bdf(f, t_span, y0, h, order=2, jac=None, tol=1e-10, max_iter=12, fd_eps=1e-8, jac_recompute_rate=2, backtrack=True):
-    a, beta0 = bdf_coeffs(order)
-    # generator returns mpmath types; cast to float
+    a, beta0 = bdf_coeffs(order)
     a = np.asarray([float(val) for val in a], dtype=float)
     beta0 = float(beta0)
     t0, tf = t_span
