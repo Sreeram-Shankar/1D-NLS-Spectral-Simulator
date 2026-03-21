@@ -148,7 +148,7 @@ Optional: `reference` (mode: on|off), `output` (save_path, overwrite), `compute`
 
 ## Integrator Families
 
-`explicit runge-kutta` (1–7), `sdirk` (2–4), `gauss-legendre`, `radauiia`, `lobattoiiic`, `rosenbrock` (2), `adams-bashforth`, `adams-moulton`, `adams-bashforth-moulton` or `abm`, `bdf`. Implicit/multistep methods use analytical NLS Jacobians when available.
+`explicit runge-kutta` (1–7), `sdirk` (2–4), `gauss-legendre`, `radauiia`, `lobattoiiia`, `rosenbrock` (2), `adams-bashforth`, `adams-moulton`, `adams-bashforth-moulton` or `abm`, `bdf`. Implicit/multistep methods use analytical NLS Jacobians when available.
 
 ---
 
