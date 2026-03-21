@@ -239,7 +239,7 @@ def get_integrator_step(family: str, order: int):
             A, b, c = irk.get_tableau("radau", order)
             _INTEGRATOR_CACHE[key] = lambda f, t, y, h, jac=None: irk.step_collocation(f, t, y, h, A, b, c, jac=jac)
         return _INTEGRATOR_CACHE[key]
-    elif family == "lobattoiiic":
+    elif family == "lobattoiiia":
         if key not in _INTEGRATOR_CACHE:
             A, b, c = irk.get_tableau("lobatto", order)
             _INTEGRATOR_CACHE[key] = lambda f, t, y, h, jac=None: irk.step_collocation(f, t, y, h, A, b, c, jac=jac)
